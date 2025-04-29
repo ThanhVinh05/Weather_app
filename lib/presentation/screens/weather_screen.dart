@@ -16,7 +16,6 @@ class _WeatherScreenState extends State<WeatherScreen> {
   final double _sampleTemperature = 28.5;
   final int _sampleHumidity = 70;
   final double _sampleWindSpeed = 3.6;
-  final double _sampleFeelsLike = 32.1;
   final IconData _sampleWeatherIcon = Icons.cloud;
 
   @override
