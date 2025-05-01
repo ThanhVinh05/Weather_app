@@ -1,4 +1,4 @@
-import 'main_weather_data.dart';
+import 'weather_data.dart';
 import 'weather_condition.dart';
 import 'wind_data.dart';
 

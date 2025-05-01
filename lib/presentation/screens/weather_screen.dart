@@ -1,4 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:weather_app/presentation/bloc/weather_bloc.dart';
+import 'package:weather_app/presentation/bloc/weather_event.dart';
+import 'package:weather_app/presentation/bloc/weather_state.dart';
+
+
+import '../widgets/weather_display_widget.dart';
+
 
 class WeatherScreen extends StatefulWidget {
   const WeatherScreen({Key? key}) : super(key: key);
@@ -10,18 +18,16 @@ class WeatherScreen extends StatefulWidget {
 class _WeatherScreenState extends State<WeatherScreen> {
   final TextEditingController _cityController = TextEditingController();
 
-  // Dữ liệu thời tiết mẫu tĩnh để hiển thị
-  final String _sampleCity = 'Hà Nội';
-  final String _sampleWeatherDescription = 'Mây rải rác';
-  final double _sampleTemperature = 28.5;
-  final int _sampleHumidity = 70;
-  final double _sampleWindSpeed = 3.6;
-  final IconData _sampleWeatherIcon = Icons.cloud;
-
   @override
   void dispose() {
     _cityController.dispose();
     super.dispose();
+  }
+
+  void _getWeather(BuildContext context) {
+    if (_cityController.text.trim().isNotEmpty) {
+      context.read<WeatherBloc>().add(GetWeatherEvent(_cityController.text.trim()));
+    }
   }
 
   @override
@@ -31,8 +37,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
         title: const Text('Weather App'),
         centerTitle: true,
         backgroundColor: Colors.blueAccent,
-        foregroundColor: Colors.white,
-        elevation: 4.0, // Thêm bóng cho AppBar
+        elevation: 0,
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -46,7 +51,7 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 borderRadius: BorderRadius.circular(8.0),
               ),
               child: Padding(
-                padding: const EdgeInsets.all(8.0),
+                padding: const EdgeInsets.all(12.0),
                 child: Row(
                   children: [
                     Expanded(
@@ -58,26 +63,28 @@ class _WeatherScreenState extends State<WeatherScreen> {
                             borderRadius: BorderRadius.circular(8.0),
                             borderSide: BorderSide.none,
                           ),
-                          filled: true, // Đổ màu nền cho TextField
+                          filled: true,
                           fillColor: Colors.grey[200],
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 15.0),
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
                         ),
                         style: const TextStyle(fontSize: 16.0),
+                        onSubmitted: (_) {
+                          _getWeather(context);
+                        },
                       ),
                     ),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 16),
                     ElevatedButton(
-                      onPressed: () {
-                        print('See pressed for city: ${_cityController.text}');
-                      },
+                      onPressed: () => _getWeather(context),
                       style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
                         textStyle: const TextStyle(fontSize: 16),
-                        shape: RoundedRectangleBorder( // Bo tròn góc nút
+                        shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8.0),
                         ),
                         backgroundColor: Colors.blueAccent,
                         foregroundColor: Colors.white,
+                        elevation: 2.0,
                       ),
                       child: const Text('Search'),
                     ),
@@ -85,97 +92,40 @@ class _WeatherScreenState extends State<WeatherScreen> {
                 ),
               ),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 30),
 
+            // Khu vực hiển thị kết quả (Loading, Data, Error)
             Expanded(
-              child: SingleChildScrollView(
-                child: Center(
-                  child: _buildWeatherDisplayStatic(),
+              child: Center(
+                child: BlocBuilder<WeatherBloc, WeatherState>(
+                  builder: (context, state) {
+                    // Kiểm tra trạng thái dựa trên state.status
+                    if (state.status == WeatherStatus.initial) {
+                      return const Text(
+                        'Enter a city to get weather',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(fontSize: 18, color: Colors.grey),
+                      );
+                    } else if (state.status == WeatherStatus.loading) {
+                      return const CircularProgressIndicator();
+                    } else if (state.status == WeatherStatus.success) {
+                      return WeatherDisplayWidget(weather: state.weather!);
+                    } else if (state.status == WeatherStatus.failure) {
+                      return Text(
+                        'Error: ${state.errorMessage!}',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(fontSize: 18, color: Colors.red),
+                      );
+                    }
+                    // Trường hợp không xác định (không nên xảy ra nếu logic đúng)
+                    return const SizedBox.shrink();
+                  },
                 ),
               ),
             ),
           ],
         ),
       ),
-    );
-  }
-
-  // Widget helper để hiển thị thông tin thời tiết mẫu tĩnh
-  Widget _buildWeatherDisplayStatic() {
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.center,
-      crossAxisAlignment: CrossAxisAlignment.center,
-      children: [
-        Text(
-          _sampleCity,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-              fontSize: 36,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87
-          ),
-        ),
-        const SizedBox(height: 16),
-
-        Icon(
-          _sampleWeatherIcon,
-          size: 100,
-          color: Colors.blue,
-        ),
-        const SizedBox(height: 12),
-
-        Text(
-          _sampleWeatherDescription,
-          style: const TextStyle(
-              fontSize: 22,
-              fontStyle: FontStyle.italic,
-              color: Colors.black54
-          ),
-        ),
-        const SizedBox(height: 24),
-
-        Text(
-          '${_sampleTemperature.toStringAsFixed(1)}°C', // Định dạng nhiệt độ
-          style: const TextStyle(
-              fontSize: 72,
-              fontWeight: FontWeight.bold,
-              color: Colors.blueAccent
-          ),
-        ),
-
-        const SizedBox(height: 32),
-
-        Card( // Sử dụng Card để nhóm các thông tin chi tiết
-          margin: const EdgeInsets.symmetric(horizontal: 16),
-          elevation: 4,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12.0), // Bo tròn góc Card
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDetailRow('Độ ẩm:', '${_sampleHumidity}%'),
-                const Divider(height: 24), // Tăng chiều cao Divider
-                _buildDetailRow('Tốc độ gió:', '${_sampleWindSpeed.toStringAsFixed(1)} m/s'),
-              ],
-            ),
-          ),
-        ),
-        const SizedBox(height: 24),
-      ],
-    );
-  }
-
-  // Widget helper cho từng dòng chi tiết
-  Widget _buildDetailRow(String label, String value) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
-        Text(value, style: const TextStyle(fontSize: 18, color: Colors.blueGrey)),
-      ],
     );
   }
 }
