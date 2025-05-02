@@ -12,18 +12,41 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
 
   void _onGetWeather(GetWeatherEvent event, Emitter<WeatherState> emit) async {
     if (event.city.trim().isEmpty) {
-      emit(state.copyWith(status: WeatherStatus.failure));
+      emit(state.copyWith(
+        status: WeatherStatus.initial,
+        weather: null,
+        forecast: null,
+      ));
       return;
     }
 
-    emit(state.copyWith(status: WeatherStatus.loading));
+    // Phát ra trạng thái loading
+    emit(state.copyWith(status: WeatherStatus.loading, errorMessage: null));
 
     try {
-
+      // Lấy thời tiết hiện tại
       final weather = await weatherRepository.getCurrentWeather(event.city);
-      emit(state.copyWith(status: WeatherStatus.success, weather: weather, errorMessage: null));
+
+      // Lấy dự báo thời tiết
+      final forecast = await weatherRepository.getWeatherForecast(event.city);
+
+      // Nếu cả hai đều thành công
+      emit(state.copyWith(
+        status: WeatherStatus.success,
+        weather: weather,
+        forecast: forecast.list,
+        errorMessage: null,
+      ));
+
     } catch (e) {
-      emit(state.copyWith(status: WeatherStatus.failure, errorMessage: 'Unable to get weather data. ${e.toString()}', weather: null));
+
+      emit(state.copyWith(
+        status: WeatherStatus.failure,
+        // errorMessage: 'Không thể lấy dữ liệu thời tiết: ${e.toString()}',
+        errorMessage: 'Không thể tìm thấy dữ liệu thời tiết của thành phố này:',
+        weather: null,
+        forecast: null,
+      ));
     }
   }
 }

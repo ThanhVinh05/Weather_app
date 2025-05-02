@@ -1,3 +1,4 @@
+import 'package:weather_app/domain/models/forecast_response.dart';
 import 'package:weather_app/domain/models/weather_response.dart';
 import 'package:weather_app/domain/repositories/weather_repository.dart';
 import 'package:weather_app/services/weather_api_service.dart';
@@ -19,13 +20,34 @@ class WeatherRepositoryImpl implements WeatherRepository {
       if (rawData['cod'] == 200) {
         return WeatherResponse.fromJson(rawData);
       } else {
-        // Xử lý trường hợp API trả về mã lỗi không phải 200 nhưng không ném DioError
-        throw Exception('API returned error code: ${rawData['cod']} - ${rawData['message']}');
+        // Xử lý trường hợp API trả về mã lỗi không phải 200
+        String? apiMessage = rawData.containsKey('message') ? rawData['message'] : 'Lỗi API không xác định';
+        throw Exception('API trả về mã lỗi: ${rawData['cod']} - $apiMessage');
       }
 
     } catch (e) {
       // Bắt lỗi từ Service hoặc lỗi parse JSON
-      throw Exception('Failed to get and parse weather data: $e');
+      throw Exception('Không lấy được và phân tích được dữ liệu thời tiết: $e');
+    }
+  }
+
+  @override
+  Future<ForecastResponse> getWeatherForecast(String city) async {
+    try {
+      final rawData = await _apiService.getWeatherForecast(city, _apiKey);
+
+      // API dự báo trả về cod là string '200' khi thành công
+      if (rawData['cod'] == '200') {
+        return ForecastResponse.fromJson(rawData);
+      } else {
+        // Xử lý trường hợp API trả về mã lỗi không phải '200'
+        String? apiMessage = rawData.containsKey('message') ? rawData['message'] : 'Lỗi API không xác định';
+        throw Exception('API trả về mã lỗi: ${rawData['cod']} - $apiMessage');
+      }
+
+    } catch (e) {
+      // Bắt lỗi từ Service hoặc lỗi parse JSON
+      throw Exception('Không thể lấy và phân tích dữ liệu dự báo thời tiết: $e');
     }
   }
 

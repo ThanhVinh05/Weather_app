@@ -1,5 +1,5 @@
 class WindData {
-  final double speed; // Tốc độ gió (m/s hoặc mph)
+  final double speed; // Tốc độ gió
 
   WindData({
     required this.speed,

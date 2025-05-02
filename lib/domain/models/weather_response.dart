@@ -4,7 +4,7 @@ import 'wind_data.dart';
 
 class WeatherResponse {
   final String name; // Tên thành phố
-  final MainWeatherData main; // Dữ liệu chính (nhiệt độ, độ ẩm...)
+  final WeatherData main; // Dữ liệu chính (nhiệt độ, độ ẩm...)
   final List<WeatherCondition> weather; // Mô tả thời tiết (icon, description)
   final WindData wind; // Dữ liệu gió
   final int id; // id thành phố
@@ -22,7 +22,7 @@ class WeatherResponse {
   factory WeatherResponse.fromJson(Map<String, dynamic> json) {
     return WeatherResponse(
       name: json['name'] as String,
-      main: MainWeatherData.fromJson(json['main'] as Map<String, dynamic>),
+      main: WeatherData.fromJson(json['main'] as Map<String, dynamic>),
       weather: (json['weather'] as List)
           .map((item) => WeatherCondition.fromJson(item as Map<String, dynamic>))
           .toList(),

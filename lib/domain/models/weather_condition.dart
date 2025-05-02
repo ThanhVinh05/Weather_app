@@ -1,6 +1,6 @@
 class WeatherCondition {
   final int id; // ID điều kiện thời tiết
-  final String description; // Mô tả chi tiết (e.g., few clouds, light rain)
+  final String description; // Mô tả chi tiết
   final String icon; // Mã icon thời tiết
 
   WeatherCondition({

@@ -1,10 +1,10 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:weather_app/data/repositories/weather_repository_impl.dart';
 import 'package:weather_app/my_app.dart';
 import 'package:weather_app/services/weather_api_service.dart';
 
-// Import class Env đã được generate
 import 'env/env.dart';
 
 
@@ -16,14 +16,17 @@ Future<void> main() async {
 
   // Kiểm tra
   if (apiKey.isEmpty) {
-    print("FATAL ERROR: OpenWeather API Key is empty!");
+    print("LỖI NGHIÊM TRỌNG: Khóa API OpenWeather trống!");
     return;
   }
-  // Khởi tạo Dio instance
+  // Khởi tạo Dio
   final dio = Dio();
 
-  // Khởi tạo Service
-  final weatherApiService = WeatherApiService(dio);
+  // Khởi tạo Connectivity
+  final connectivity = Connectivity();
+
+  // Khởi tạo Service, truyền Dio và Connectivity
+  final weatherApiService = WeatherApiService(dio, connectivity);
 
   // Khởi tạo Repository Implementation, truyền Service và API Key
   final weatherRepository = WeatherRepositoryImpl(weatherApiService, apiKey);

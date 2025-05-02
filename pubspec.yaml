@@ -38,6 +38,9 @@ dependencies:
   cupertino_icons: ^1.0.8
   envied: ^1.1.1
   equatable: ^2.0.5
+  geolocator: ^11.0.0 # Để xác định vị trí người dùng
+  connectivity_plus: ^5.0.2 # Để kiểm tra kết nối mạng
+  intl: ^0.18.0
 
 dev_dependencies:
   flutter_test:
