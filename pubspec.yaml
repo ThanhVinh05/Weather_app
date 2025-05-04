@@ -41,6 +41,7 @@ dependencies:
   geolocator: ^11.0.0 # Để xác định vị trí người dùng
   connectivity_plus: ^5.0.2 # Để kiểm tra kết nối mạng
   intl: ^0.18.0
+  rxdart: ^0.27.0
 
 dev_dependencies:
   flutter_test:
