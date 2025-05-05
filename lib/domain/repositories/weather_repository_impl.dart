@@ -1,3 +1,4 @@
+import 'package:location/location.dart';
 import 'package:weather_app/domain/models/forecast_response.dart';
 import 'package:weather_app/domain/models/weather_response.dart';
 import 'package:weather_app/domain/repositories/weather_repository.dart';
@@ -6,8 +7,9 @@ import 'package:weather_app/services/weather_api_service.dart';
 class WeatherRepositoryImpl implements WeatherRepository {
   final WeatherApiService _apiService;
   final String _apiKey;
+  final Location _location;
 
-  WeatherRepositoryImpl(this._apiService, this._apiKey);
+  WeatherRepositoryImpl(this._apiService, this._apiKey, this._location);
 
   @override
   Future<WeatherResponse> getCurrentWeather(String city) async {
@@ -67,6 +69,42 @@ class WeatherRepositoryImpl implements WeatherRepository {
     } catch (e) {
       print('Lỗi tại Repository khi lấy gợi ý: $e');
       return []; // Trả về danh sách rỗng khi có lỗi
+    }
+  }
+
+  @override
+  Future<WeatherResponse> getCurrentWeatherByCoordinates(double lat, double lon) async {
+    try {
+      final rawData = await _apiService.getCurrentWeatherByCoordinates(lat, lon, _apiKey);
+
+      if (rawData['cod'] == 200) {
+        return WeatherResponse.fromJson(rawData);
+      } else {
+        String? apiMessage = rawData.containsKey('message') ? rawData['message'] : 'Lỗi API không xác định';
+        throw Exception('API trả về mã lỗi: ${rawData['cod']} - $apiMessage');
+      }
+
+    } catch (e) {
+      throw Exception('Không lấy được và phân tích được dữ liệu thời tiết theo tọa độ: $e');
+    }
+  }
+
+  // Triển khai phương thức lấy dự báo bằng tọa độ
+  @override
+  Future<ForecastResponse> getWeatherForecastByCoordinates(double lat, double lon) async {
+    try {
+      final rawData = await _apiService.getWeatherForecastByCoordinates(lat, lon, _apiKey);
+
+      // API dự báo trả về '200' là string cho thành công
+      if (rawData['cod'] == '200') {
+        return ForecastResponse.fromJson(rawData);
+      } else {
+        String? apiMessage = rawData.containsKey('message') ? rawData['message'] : 'Lỗi API không xác định';
+        throw Exception('API trả về mã lỗi: ${rawData['cod']} - $apiMessage');
+      }
+
+    } catch (e) {
+      throw Exception('Không thể lấy và phân tích dữ liệu dự báo theo tọa độ: $e');
     }
   }
 }

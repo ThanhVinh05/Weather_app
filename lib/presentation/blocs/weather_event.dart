@@ -34,3 +34,11 @@ class ClearCitySuggestionsEvent extends WeatherEvent {
   @override
   List<Object> get props => []; // Không có thuộc tính
 }
+
+// Event lấy thời tiết theo vị trí hiện tại
+class GetWeatherByLocationEvent extends WeatherEvent {
+  const GetWeatherByLocationEvent();
+
+  @override
+  List<Object> get props => []; // Không có thuộc tính
+}

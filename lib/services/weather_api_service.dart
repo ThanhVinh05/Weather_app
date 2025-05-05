@@ -128,6 +128,92 @@ class WeatherApiService {
     }
   }
 
+  Future<Map<String, dynamic>> getCurrentWeatherByCoordinates(double lat, double lon, String apiKey) async {
+    try {
+      if (await _checkConnectivity() == false) {
+        throw Exception('Không có kết nối Internet.');
+      }
+
+      final response = await _dio.get(
+        '$_weatherBaseUrl/weather',
+        queryParameters: {
+          'lat': lat,
+          'lon': lon,
+          'appid': apiKey,
+          'units': 'metric',
+          'lang': 'vi',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'Mã trạng thái trả về của API ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      String errorMessage = 'Không thể lấy dữ liệu thời tiết theo tọa độ.';
+      if (e.response != null) {
+        if (e.response!.data is Map && e.response!.data.containsKey('message')) {
+          errorMessage = 'Lỗi API: ${e.response!.statusCode} - ${e.response!.data['message']}';
+        } else {
+          errorMessage = 'Lỗi API: ${e.response!.statusCode}';
+        }
+      } else {
+        errorMessage = 'Lỗi mạng: ${e.message}';
+      }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Đã xảy ra lỗi không mong muốn khi lấy thời tiết theo tọa độ: $e');
+    }
+  }
+
+  Future<Map<String, dynamic>> getWeatherForecastByCoordinates(double lat, double lon, String apiKey) async {
+    try {
+      if (await _checkConnectivity() == false) {
+        throw Exception('Không có kết nối Internet.');
+      }
+
+      final response = await _dio.get(
+        '$_weatherBaseUrl/forecast',
+        queryParameters: {
+          'lat': lat,
+          'lon': lon,
+          'appid': apiKey,
+          'units': 'metric',
+          'lang': 'vi',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Map<String, dynamic>;
+      } else {
+        throw DioException(
+            requestOptions: response.requestOptions,
+            response: response,
+            type: DioExceptionType.badResponse,
+            error: 'Mã trạng thái trả về của API ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      String errorMessage = 'Không thể lấy dữ liệu dự báo theo tọa độ.';
+      if (e.response != null) {
+        if (e.response!.data is Map &&
+            e.response!.data.containsKey('message')) {
+          errorMessage = 'Lỗi API: ${e.response!.statusCode} - ${e.response!.data['message']}';
+        } else {
+          errorMessage = 'Lỗi API: ${e.response!.statusCode}';
+        }
+      } else {
+        errorMessage = 'Lỗi mạng: ${e.message}';
+      }
+      throw Exception(errorMessage);
+    } catch (e) {
+      throw Exception('Đã xảy ra lỗi không mong muốn khi lấy dự báo theo tọa độ: $e');
+    }
+  }
 
   Future<bool> _checkConnectivity() async {
     final connectivityResult = await _connectivity.checkConnectivity();
