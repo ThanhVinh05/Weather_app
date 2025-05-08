@@ -58,7 +58,7 @@ class WeatherBloc extends Bloc<WeatherEvent, WeatherState> {
           errorMessage = 'API trả về mã lỗi. Vui lòng kiểm tra lại API của bạn.';
         } else {
           // errorMessage = 'Đã xảy ra lỗi không xác định: ${e.toString()}';
-          errorMessage = 'Không thể lấy và phân tích dữ liệu thời tiết.';
+          errorMessage = 'Không thể lấy dữ liệu thời tiết của thành phố này.';
         }
       } else {
         // Nếu không phải Exception, chuyển sang String

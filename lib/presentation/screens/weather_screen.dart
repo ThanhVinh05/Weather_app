@@ -34,7 +34,7 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
   final FocusNode _cityFocusNode = FocusNode();
 
   final List<String> _cities = [
-    'Chọn thành phố',
+    '',
     'Hà Nội',
     'Đà Nẵng',
     'Thành phố Hồ Chí Minh',
@@ -43,7 +43,7 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
     'Bangkok',
   ];
 
-  String _selectedCity = 'Chọn thành phố';
+  String _selectedCity = '';
 
   @override
   void initState() {
@@ -51,7 +51,6 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
     _cityController.addListener(_onCityQueryChanged);
     _cityFocusNode.addListener(_onFocusChanged);
     _cityController.clear();
-    // Gửi event lấy thời tiết theo vị trí.
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<WeatherBloc>().add(const GetWeatherByLocationEvent());
     });
@@ -69,25 +68,21 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
   void _onCityQueryChanged() {
     final query = _cityController.text.trim();
 
-    // Gửi event lấy gợi ý chỉ khi TextField có focus và text không rỗng
     if (_cityFocusNode.hasFocus && query.isNotEmpty) {
       context.read<WeatherBloc>().add(GetCitySuggestionsEvent(query));
     } else if (query.isEmpty) {
-      // Nếu text rỗng, xóa gợi ý
       context.read<WeatherBloc>().add(const ClearCitySuggestionsEvent());
     }
   }
 
   void _onFocusChanged() {
     if (!_cityFocusNode.hasFocus) {
-      // Nếu TextField mất focus, đợi một chút rồi xóa gợi ý
       Future.delayed(const Duration(milliseconds: 200), () {
         if (mounted) {
           context.read<WeatherBloc>().add(const ClearCitySuggestionsEvent());
         }
       });
     } else {
-      // Nếu TextField có focus, kiểm tra nếu có text thì lấy gợi ý lại
       if (_cityController.text.trim().isNotEmpty) {
         context.read<WeatherBloc>().add(GetCitySuggestionsEvent(_cityController.text.trim()));
       }
@@ -103,7 +98,7 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
       _showErrorDialog('Vui lòng nhập tên thành phố.');
       _cityController.clear();
       setState(() {
-        _selectedCity = 'Chọn thành phố';
+        _selectedCity = '';
       });
       context.read<WeatherBloc>().add(const ClearCitySuggestionsEvent());
       context.read<WeatherBloc>().add(GetWeatherEvent(''));
@@ -135,21 +130,46 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
     );
   }
 
+  String _getBackgroundImage(String? iconCode) {
+    if (iconCode == null || iconCode.isEmpty) {
+      return 'assets/backgrounds/initial_background.jpg'; // Ảnh nền ban đầu hoặc mặc định
+    }
+
+    // Logic ánh xạ mã icon sang tên file ảnh
+    if (iconCode.endsWith('d')) { // Ban ngày
+      if (iconCode.startsWith('01')) return 'assets/backgrounds/clear_day.jpg';
+      if (iconCode.startsWith('02') || iconCode.startsWith('03') || iconCode.startsWith('04')) return 'assets/backgrounds/clouds_day.jpg';
+      if (iconCode.startsWith('09') || iconCode.startsWith('10') || iconCode.startsWith('11')) return 'assets/backgrounds/rain_day.jpg'; // Gộp mưa, mưa phùn, dông
+      if (iconCode.startsWith('13')) return 'assets/backgrounds/snow_day.jpg';
+      if (iconCode.startsWith('50')) return 'assets/backgrounds/mist_day.jpg';
+      return 'assets/backgrounds/default_day.jpg'; // Mặc định ban ngày
+    } else { // Ban đêm ('n')
+      if (iconCode.startsWith('01')) return 'assets/backgrounds/clear_night.jpg';
+      if (iconCode.startsWith('02') || iconCode.startsWith('03') || iconCode.startsWith('04')) return 'assets/backgrounds/clouds_night.jpg';
+      if (iconCode.startsWith('09') || iconCode.startsWith('10') || iconCode.startsWith('11')) return 'assets/backgrounds/rain_night.jpg'; // Gộp mưa, mưa phùn, dông
+      if (iconCode.startsWith('13')) return 'assets/backgrounds/snow_night.jpg';
+      if (iconCode.startsWith('50')) return 'assets/backgrounds/mist_night.jpg';
+      return 'assets/backgrounds/default_night.jpg'; // Mặc định ban đêm
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Weather App'),
+        title: const Text('Weather App', style: TextStyle(color: Colors.white),),
         centerTitle: true,
-        backgroundColor: Colors.blueAccent,
+        backgroundColor: Colors.blueAccent.withOpacity(0.5),
         elevation: 0,
+        iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.my_location),
             onPressed: () {
               _cityController.clear();
               setState(() {
-                _selectedCity = 'Chọn thành phố';
+                _selectedCity = '';
               });
               context.read<WeatherBloc>().add(const ClearCitySuggestionsEvent());
               context.read<WeatherBloc>().add(const GetWeatherByLocationEvent());
@@ -161,7 +181,6 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
         onTap: () {
           FocusScope.of(context).unfocus();
         },
-        // Lắng nghe trạng thái của Bloc để hiển thị Loading, Data, Error (dialog)
         child: BlocConsumer<WeatherBloc, WeatherState>(
           listener: (context, state) {
             if (state.status == WeatherStatus.failure) {
@@ -172,177 +191,214 @@ class _WeatherScreenViewState extends State<WeatherScreenView> {
                 _cityController.clear();
               }
               setState(() {
-                _selectedCity = 'Chọn thành phố';
+                _selectedCity = '';
               });
             }
           },
           builder: (context, state) {
-            final String currentQuery = _cityController.text.trim().toLowerCase();
-            final List<String>? filteredSuggestions = state.citySuggestions?.where((suggestion) {
-              // Chỉ hiển thị gợi ý nếu có query và query khớp với gợi ý
-              if (currentQuery.isEmpty) {
-                return false;
-              }
-              return suggestion.toLowerCase().contains(currentQuery);
-            }).toList();
+            return BlocBuilder<WeatherBloc, WeatherState>(
+                  builder: (context, state) {
+                    final currentIconCode = state.status == WeatherStatus.success && state.weather != null && state.weather!.weather.isNotEmpty
+                        ? state.weather!.weather.first.icon
+                        : null;
 
-            return Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: <Widget>[
-                  Card(
-                    elevation: 2.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    margin: const EdgeInsets.only(bottom: 16.0),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 4.0),
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Chọn thành phố',
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.zero,
+                    final backgroundImagePath = _getBackgroundImage(currentIconCode);
+
+                    final String currentQuery = _cityController.text.trim().toLowerCase();
+                    final List<String>? filteredSuggestions = state.citySuggestions?.where((suggestion) {
+                      if (currentQuery.isEmpty) {
+                        return false;
+                      }
+                      return suggestion.toLowerCase().contains(currentQuery);
+                    }).toList();
+
+
+                    return Container(
+                      width: double.infinity,
+                      height: double.infinity,
+                      decoration: BoxDecoration(
+                        image: DecorationImage(
+                          image: AssetImage(backgroundImagePath),
+                          fit: BoxFit.cover,
                         ),
-                        isExpanded: true,
-                        value: _selectedCity,
-                        items: _cities.map((String city) {
-                          return DropdownMenuItem<String>(
-                            value: city,
-                            child: Text(city),
-                          );
-                        }).toList(),
-                        onChanged: (String? newValue) {
-                          if (newValue != null) {
-                            setState(() {
-                              _selectedCity = newValue;
-                            });
-                            if (newValue != 'Chọn thành phố') {
-                              _getWeather(newValue);
-                            } else {
-                              _cityController.clear();
-                              _getWeather('');
-                            }
-                            FocusScope.of(context).unfocus();
-                          }
-                        },
                       ),
-                    ),
-                  ),
+                      child: SafeArea(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: <Widget>[
+                              // Dropdown chọn thành phố
+                              Container(
+                                margin: const EdgeInsets.only(bottom: 16.0),
+                                padding: const EdgeInsets.symmetric(horizontal: 12.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.5),
+                                  borderRadius: BorderRadius.circular(8.0),
+                                ),
+                                child: DropdownButtonFormField<String>(
 
-                  // Search Area (TextField và Button)
-                  Card(
-                    elevation: 2.0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(8.0),
-                    ),
-                    // Không có margin dưới nếu hiển thị gợi ý VÀ TextField đang có focus
-                    margin: _cityFocusNode.hasFocus && filteredSuggestions != null && filteredSuggestions.isNotEmpty
-                        ? EdgeInsets.zero
-                        : const EdgeInsets.only(bottom: 24.0),
-
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _cityController,
-                                  focusNode: _cityFocusNode,
-                                  decoration: InputDecoration(
-                                    labelText: 'Nhập tên thành phố',
-                                    border: OutlineInputBorder(
-                                      borderRadius: BorderRadius.circular(8.0),
-                                      borderSide: BorderSide.none,
-                                    ),
-                                    filled: true,
-                                    fillColor: Colors.grey[200],
-                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
+                                  decoration: const InputDecoration(
+                                    labelText: 'Chọn thành phố',
+                                    labelStyle: TextStyle(color: Colors.black87),
+                                    border: InputBorder.none,
+                                    contentPadding: EdgeInsets.zero,
                                   ),
-                                  style: const TextStyle(fontSize: 16.0),
+                                  isExpanded: true,
+                                  value: _selectedCity,
+                                  items: _cities.map((String city) {
+                                    return DropdownMenuItem<String>(
+                                      value: city,
+                                      // Sử dụng DefaultTextStyle để áp dụng màu chữ cho các mục trong Dropdown
+                                      child: DefaultTextStyle(
+                                        style: const TextStyle(color: Colors.black87),
+                                        child: Text(city),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (String? newValue) {
+                                    if (newValue != null) {
+                                      setState(() {
+                                        _selectedCity = newValue;
+                                      });
+                                      if (newValue != '') {
+                                        _getWeather(newValue);
+                                      } else {
+                                        _cityController.clear();
+                                        _getWeather('');
+                                      }
+                                      FocusScope.of(context).unfocus();
+                                    }
+                                  },
+                                  dropdownColor: Colors.white.withOpacity(0.7),
+                                  style: const TextStyle(fontSize: 16.0, color: Colors.white),
+                                  iconEnabledColor: Colors.black,
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              ElevatedButton(
-                                onPressed: () {
-                                  setState(() {
-                                    _selectedCity = 'Chọn thành phố';
-                                  });
-                                  _getWeather(_cityController.text.trim());
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
-                                  textStyle: const TextStyle(fontSize: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(8.0),
-                                  ),
-                                  backgroundColor: Colors.blueAccent,
-                                  foregroundColor: Colors.white,
-                                  elevation: 2.0,
+
+                              // Khu vực tìm kiếm (TextField và Button)
+                              Container(
+                                margin: _cityFocusNode.hasFocus && filteredSuggestions != null && filteredSuggestions.isNotEmpty
+                                    ? EdgeInsets.zero
+                                    : const EdgeInsets.only(bottom: 24.0),
+                                padding: const EdgeInsets.all(12.0),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(filteredSuggestions != null && filteredSuggestions.isNotEmpty ? 0.9 : 0.3), // Nền trong suốt hơn khi không có gợi ý, ít trong suốt hơn khi có gợi ý
+                                  borderRadius: BorderRadius.circular(8.0),
                                 ),
-                                child: const Text('Search'),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                                  children: [
+                                    Row(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Expanded(
+                                          child: TextField(
+                                            controller: _cityController,
+                                            focusNode: _cityFocusNode,
+                                            decoration: InputDecoration(
+                                              labelText: 'Nhập tên thành phố',
+                                              labelStyle: TextStyle(color: _cityFocusNode.hasFocus ? Colors.black87 : Colors.black54), // Đổi màu label khi focus
+                                              border: OutlineInputBorder(
+                                                borderRadius: BorderRadius.circular(8.0),
+                                                borderSide: BorderSide.none,
+                                              ),
+                                              filled: true,
+                                              fillColor: Colors.white.withOpacity(0.7),
+                                              contentPadding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 15.0),
+                                            ),
+                                            style: const TextStyle(fontSize: 16.0, color: Colors.black87),
+                                            cursorColor: Colors.blueAccent,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        ElevatedButton(
+                                          onPressed: () {
+                                            setState(() {
+                                              _selectedCity = '';
+                                            });
+                                            _getWeather(_cityController.text.trim());
+                                          },
+                                          style: ElevatedButton.styleFrom(
+                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 15),
+                                            textStyle: const TextStyle(fontSize: 16),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius: BorderRadius.circular(8.0),
+                                            ),
+                                            backgroundColor: Colors.blueAccent,
+                                            foregroundColor: Colors.white,
+                                            elevation: 0,
+                                          ),
+                                          child: const Text('Search'),
+                                        ),
+                                      ],
+                                    ),
+
+                                    if (_cityFocusNode.hasFocus && filteredSuggestions != null && filteredSuggestions.isNotEmpty)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 8.0),
+                                        child: ConstrainedBox(
+                                          constraints: const BoxConstraints(maxHeight: 200),
+                                          child: ListView.builder(
+                                            shrinkWrap: true,
+                                            padding: EdgeInsets.zero,
+                                            itemCount: filteredSuggestions.length,
+                                            itemBuilder: (context, index) {
+                                              final suggestion = filteredSuggestions[index];
+                                              return ListTile(
+                                                title: Text(suggestion, style: const TextStyle(color: Colors.black87),),
+                                                onTap: () {
+                                                  setState(() {
+                                                    _selectedCity = '';
+                                                  });
+                                                  _getWeather(suggestion);
+                                                },
+                                                tileColor: Colors.white.withOpacity(0.9),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                              ),
+
+
+                              // Khu vực hiển thị kết quả (Loading, Data)
+                              Expanded(
+                                child: Center(
+                                  child: _buildWeatherContent(state),
+                                ),
                               ),
                             ],
                           ),
-
-                          // Hiển thị danh sách gợi ý chỉ khi có focus và có gợi ý
-                          if (_cityFocusNode.hasFocus && filteredSuggestions != null && filteredSuggestions.isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 8.0),
-                              child: ConstrainedBox(
-                                constraints: const BoxConstraints(maxHeight: 200),
-                                child: ListView.builder(
-                                  shrinkWrap: true,
-                                  padding: EdgeInsets.zero,
-                                  itemCount: filteredSuggestions.length,
-                                  itemBuilder: (context, index) {
-                                    final suggestion = filteredSuggestions[index];
-                                    return ListTile(
-                                      title: Text(suggestion),
-                                      onTap: () {
-                                        setState(() {
-                                          _selectedCity = 'Chọn thành phố';
-                                        });
-                                        _getWeather(suggestion);
-                                      },
-                                    );
-                                  },
-                                ),
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
-                    ),
-                  ),
-
-                  // Khu vực hiển thị kết quả (Loading, Data, Error)
-                  Expanded(
-                    child: Center(
-                      child: _buildWeatherContent(state),
-                    ),
-                  ),
-                ],
-              ),
-            );
+                    );
+                  },
+                );
           },
-        ),
+          ),
       ),
     );
   }
 
   Widget _buildWeatherContent(WeatherState state) {
     if (state.status == WeatherStatus.loading) {
-      return const CircularProgressIndicator();
+      return const CircularProgressIndicator(color: Colors.white,);
     } else if (state.status == WeatherStatus.success) {
       if (state.weather != null) {
-        return WeatherDisplayWidget(
-          weather: state.weather!,
-          forecast: state.forecast,
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.3),
+            borderRadius: BorderRadius.circular(12.0),
+            border: Border.all(color: Colors.white.withOpacity(0.5), width: 1.0),
+          ),
+          padding: const EdgeInsets.all(16.0),
+          child: WeatherDisplayWidget(
+            weather: state.weather!,
+            forecast: state.forecast,
+          ),
         );
       }
     }
